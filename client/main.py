@@ -44,7 +44,7 @@ def main():
       s.connect(("127.0.0.1", 4069))
       s.send(bytes([2]))
 
-      command = custom_capnp.JoystickCommand.new_message(
+      command = custom_capnp.CustomReserved0.new_message(
         roll = carState.roll,
         pitch = carState.pitch,
         yaw = carState.yaw,

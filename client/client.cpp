@@ -9,6 +9,7 @@
 #include <capnp/common.h>
 #include <capnp/serialize.h>
 #include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <future>
 #include <kj/array.h>
@@ -45,10 +46,10 @@ bool isFileDescriptiorValid(int client_socket_fd) {
 
 // This config works for Logitech Extreme 3D Pro
 struct JoystickMapping {
-    int roll_axis = 0;
-    int pitch_axis = 1;
-    int yaw_axis = 2;
-    int throttle_axis = 3;
+    int roll_axis = 3;
+    int pitch_axis = 4;
+    int yaw_axis = 0;
+    int throttle_axis = 1;
 
     bool roll_inverted = false;
     bool pitch_inverted = true;
@@ -78,9 +79,9 @@ int get_socket_connection(const std::string &ip) {
     return client_fd;
 }
 
-void send_op(int fd, int op) {
-    std::cout << "sending op: " << op << std::endl;
-    int buf[1] = {op};
+void send_op(int fd, uint8_t op) {
+    printf("sending op: %d\n", op);
+    uint8_t buf[1] = {op};
     write(fd, buf, sizeof(buf));
 }
 
@@ -111,44 +112,43 @@ int main(int argc, char** argv)
 
     while (true) {
         if (has_started) {
-        //     { // axis
-        //         ::capnp::MallocMessageBuilder message;
-        //         cereal::CustomReserved0::Builder jst = message.initRoot<cereal::CustomReserved0>();
-        //
-        //         int fd = get_socket_connection(ip);
-        //         const float roll = joystick->get_axis(joystick_mapping.roll_axis) *
-        //                            (joystick_mapping.roll_inverted ? -1.f : 1.f);
-        //         const float pitch = joystick->get_axis(joystick_mapping.pitch_axis) *
-        //                             (joystick_mapping.pitch_inverted ? -1.f : 1.f);
-        //         const float yaw = joystick->get_axis(joystick_mapping.yaw_axis) *
-        //                           (joystick_mapping.yaw_inverted ? -1.f : 1.f);
-        //         float throttle = joystick->get_axis(joystick_mapping.throttle_axis) *
-        //                          (joystick_mapping.throttle_inverted ? -1.f : 1.f);
-        //         // Scale -1 to 1 throttle range to 0 to 1
-        //         throttle = throttle / 2.f + 0.5f;
-        //         send_op(fd, 2);
-        //
-        //
-        //         jst.setYaw(yaw);
-        //         jst.setPitch(pitch);
-        //         jst.setRoll(roll);
-        //         jst.setThrottle(throttle);
-        //
-        //         if (isFileDescriptiorValid(fd)) {
-        //             try {
-        //                 capnp::writePackedMessageToFd(fd, message);
-        //             } catch (kj::Exception& e) {
-        //                 std::cout << "Failed to write message" << e.getDescription().cStr() << std::endl;
-        //             }
-        //         }
-        //
-        //         uint8_t response[1];
-        //         int bytes = read(fd, response, sizeof(response));
-        //         if (bytes == -1) {
-        //             printf("error reading response");
-        //         }
-        //         close(fd);
-        //     }
+            { // axis
+                ::capnp::MallocMessageBuilder message;
+                cereal::CustomReserved0::Builder jst = message.initRoot<cereal::CustomReserved0>();
+
+                int fd = get_socket_connection(ip);
+                const float roll = joystick->get_axis(joystick_mapping.roll_axis) *
+                                   (joystick_mapping.roll_inverted ? -1.f : 1.f);
+                const float pitch = joystick->get_axis(joystick_mapping.pitch_axis) *
+                                    (joystick_mapping.pitch_inverted ? -1.f : 1.f);
+                const float yaw = joystick->get_axis(joystick_mapping.yaw_axis) *
+                                  (joystick_mapping.yaw_inverted ? -1.f : 1.f);
+                float throttle = joystick->get_axis(joystick_mapping.throttle_axis) *
+                                 (joystick_mapping.throttle_inverted ? -1.f : 1.f);
+                // Scale -1 to 1 throttle range to 0 to 1
+                throttle = throttle / 2.f + 0.5f;
+                send_op(fd, 2);
+
+                jst.setYaw(yaw);
+                jst.setPitch(pitch);
+                jst.setRoll(roll);
+                jst.setThrottle(throttle);
+
+                if (isFileDescriptiorValid(fd)) {
+                    try {
+                        capnp::writePackedMessageToFd(fd, message);
+                    } catch (kj::Exception& e) {
+                        std::cout << "Failed to write message" << e.getDescription().cStr() << std::endl;
+                    }
+                }
+
+                uint8_t response[1];
+                int bytes = read(fd, response, sizeof(response));
+                if (bytes == -1) {
+                    printf("error reading response");
+                }
+                close(fd);
+            }
 
             { // rb
                 if (joystick->get_button(5)) {

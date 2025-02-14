@@ -22,6 +22,7 @@
 #include <unistd.h>
 
 #include "cereal/gen/cpp/custom.capnp.h"
+#include <capnp/serialize-packed.h>
 #include "mavlink-bridge.hpp"
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -186,11 +187,6 @@ void MavlinkBridge::apply_command(int client_socket_fd) {
   auto newYaw = command.getYaw();
   auto newThrust = command.getThrottle();
 
-  std::cout << newRoll << std::endl;
-  std::cout << newPitch << std::endl;
-  std::cout << newYaw << std::endl;
-  std::cout << newThrust << std::endl;
-
   auto result = this->manual_control_->set_manual_control_input(newPitch, newRoll, newThrust, newYaw);
   if (result != mavsdk::ManualControl::Result::Success) {
     std::cerr << "Failed to send manual control input" << std::endl;
@@ -203,50 +199,31 @@ void MavlinkBridge::takeoff(int client_socket_fd) {
   if (this->action_ == nullptr) {
     throw std::runtime_error("Action plugin not initialized");
   }
-  if (this->last_position.relative_altitude_m <= 1) {
-    std::cout << "Stopping offboard" << std::endl;
-    this->offboard_->stop();
-  }
-  const auto arm_result = this->action_->arm();
-  if (arm_result != mavsdk::Action::Result::Success) {
-    throw std::runtime_error("Failed to arm");
-  }
-  const auto set_takeoff_altitude_result =
-      this->action_->set_takeoff_altitude(3.0);
-  if (set_takeoff_altitude_result != mavsdk::Action::Result::Success) {
-    throw std::runtime_error("Failed to set takeoff altitude");
-  }
-  const auto takeoff_result = this->action_->takeoff();
-  if (takeoff_result != mavsdk::Action::Result::Success) {
-    throw std::runtime_error("Failed to takeoff");
-  }
-  std::promise in_air_promise = std::promise<void>{};
-  auto in_air_future = in_air_promise.get_future();
-  mavsdk::Telemetry::LandedStateHandle handle =
-      this->telemetry_->subscribe_landed_state(
-          [this, &in_air_promise,
-           &handle](mavsdk::Telemetry::LandedState state) {
-            if (state == mavsdk::Telemetry::LandedState::InAir) {
-              this->telemetry_->unsubscribe_landed_state(handle);
-              in_air_promise.set_value();
-            }
-          });
-  in_air_future.wait_for(seconds(10));
-  if (in_air_future.wait_for(seconds(10)) == std::future_status::timeout) {
-    throw std::runtime_error("Timed out waiting for takeoff");
-  }
 
-  mavsdk::Offboard::VelocityBodyYawspeed stay{};
-  this->offboard_->set_velocity_body(stay);
+    for (unsigned i = 0; i < 10; ++i) {
+        this->manual_control_->set_manual_control_input(0.f, 0.f, 0.5f, 0.f);
+    }
 
-  mavsdk::Offboard::Result offboard_result = this->offboard_->start();
-  if (offboard_result != mavsdk::Offboard::Result::Success) {
-    throw std::runtime_error("Failed to start offboard");
-  }
-  char buff[1] = {0};
-  if (isFileDescriptiorValid(client_socket_fd)) {
-    write(client_socket_fd, buff, 1);
-  }
+    auto action_result = this->action_->arm();
+    if (action_result != Action::Result::Success) {
+        std::cerr << "Arming failed: " << action_result << '\n';
+        return;
+    }
+
+    for (unsigned i = 0; i < 10; ++i) {
+        this->manual_control_->set_manual_control_input(0.f, 0.f, 0.5f, 0.f);
+    }
+
+    auto manual_control_result = this->manual_control_->start_position_control();
+    if (manual_control_result != ManualControl::Result::Success) {
+        std::cerr << "Position control start failed: " << manual_control_result << '\n';
+        return;
+    }
+
+    char buff[1] = {0};
+    if (isFileDescriptiorValid(client_socket_fd)) {
+      write(client_socket_fd, buff, 1);
+    }
 }
 
 void MavlinkBridge::land(int client_socket_fd) {
