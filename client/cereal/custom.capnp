@@ -9,6 +9,10 @@ $Cxx.namespace("cereal");
 
 # you can rename the struct, but don't change the identifier
 struct CustomReserved0 @0x81c2f05a394cf4af {
+ roll  @0 :Float32;
+ pitch  @1 :Float32;
+ yaw  @2 :Float32;
+ throttle  @3 :Float32;
 }
 
 struct CustomReserved1 @0xaedffd8f31e7b55d {
@@ -38,9 +42,3 @@ struct CustomReserved8 @0xf416ec09499d9d19 {
 struct CustomReserved9 @0xa1680744031fdb2d {
 }
 
-struct JoystickCommand {
- roll  @0 :Float32;
- pitch  @1 :Float32;
- yaw  @2 :Float32;
- throttle  @3 :Float32;
-}

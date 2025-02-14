@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include <future>
 #include <iostream>
+#include <kj/exception.h>
 #include <mavsdk/component_type.h>
 #include <memory>
 #include <signal.h>
@@ -155,8 +156,8 @@ void MavlinkBridge::run_tcp_server(const uint16_t port) {
         } else if (buf[0] == 0x04) {
           this->land(client_socket_fd);
         }
-      } catch (...) {
-        std::cerr << "Failed to send image" << std::endl;
+      } catch (kj::Exception& e) {
+        std::cout << "packed reader error: " << e.getDescription().cStr() << std::endl;
       }
       if (isFileDescriptiorValid(client_socket_fd)) {
         shutdown(client_socket_fd, SHUT_RDWR);
@@ -178,13 +179,12 @@ void MavlinkBridge::apply_command(int client_socket_fd) {
     return;
   }
   ::capnp::PackedFdMessageReader message(client_socket_fd);
-  cereal::JoystickCommand::Reader command =
-      message.getRoot<cereal::JoystickCommand>();
-  float axesScaling = 1.0f * 1000.0f;
-  auto newRoll = command.getRoll() * axesScaling;
-  auto newPitch = command.getPitch() * axesScaling;
-  auto newYaw = command.getYaw() * axesScaling;
-  auto newThrust = command.getThrottle() * axesScaling;
+  cereal::CustomReserved0::Reader command =
+      message.getRoot<cereal::CustomReserved0>();
+  auto newRoll = command.getRoll();
+  auto newPitch = command.getPitch();
+  auto newYaw = command.getYaw();
+  auto newThrust = command.getThrottle();
 
   std::cout << newRoll << std::endl;
   std::cout << newPitch << std::endl;

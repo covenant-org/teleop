@@ -28,7 +28,6 @@ CAPNP_DECLARE_SCHEMA(f98d843bfd7004a3);
 CAPNP_DECLARE_SCHEMA(b86e6369214c01c8);
 CAPNP_DECLARE_SCHEMA(f416ec09499d9d19);
 CAPNP_DECLARE_SCHEMA(a1680744031fdb2d);
-CAPNP_DECLARE_SCHEMA(b4d837eddf3db97e);
 
 }  // namespace schemas
 }  // namespace capnp
@@ -43,7 +42,7 @@ struct CustomReserved0 {
   class Pipeline;
 
   struct _capnpPrivate {
-    CAPNP_DECLARE_STRUCT_HEADER(81c2f05a394cf4af, 0, 0)
+    CAPNP_DECLARE_STRUCT_HEADER(81c2f05a394cf4af, 2, 0)
     #if !CAPNP_LITE
     static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
     #endif  // !CAPNP_LITE
@@ -185,21 +184,6 @@ struct CustomReserved9 {
   };
 };
 
-struct JoystickCommand {
-  JoystickCommand() = delete;
-
-  class Reader;
-  class Builder;
-  class Pipeline;
-
-  struct _capnpPrivate {
-    CAPNP_DECLARE_STRUCT_HEADER(b4d837eddf3db97e, 2, 0)
-    #if !CAPNP_LITE
-    static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
-    #endif  // !CAPNP_LITE
-  };
-};
-
 // =======================================================================================
 
 class CustomReserved0::Reader {
@@ -218,6 +202,14 @@ public:
     return ::capnp::_::structString(_reader, *_capnpPrivate::brand());
   }
 #endif  // !CAPNP_LITE
+
+  inline float getRoll() const;
+
+  inline float getPitch() const;
+
+  inline float getYaw() const;
+
+  inline float getThrottle() const;
 
 private:
   ::capnp::_::StructReader _reader;
@@ -246,6 +238,18 @@ public:
 #if !CAPNP_LITE
   inline ::kj::StringTree toString() const { return asReader().toString(); }
 #endif  // !CAPNP_LITE
+
+  inline float getRoll();
+  inline void setRoll(float value);
+
+  inline float getPitch();
+  inline void setPitch(float value);
+
+  inline float getYaw();
+  inline void setYaw(float value);
+
+  inline float getThrottle();
+  inline void setThrottle(float value);
 
 private:
   ::capnp::_::StructBuilder _builder;
@@ -912,151 +916,60 @@ private:
 };
 #endif  // !CAPNP_LITE
 
-class JoystickCommand::Reader {
-public:
-  typedef JoystickCommand Reads;
-
-  Reader() = default;
-  inline explicit Reader(::capnp::_::StructReader base): _reader(base) {}
-
-  inline ::capnp::MessageSize totalSize() const {
-    return _reader.totalSize().asPublic();
-  }
-
-#if !CAPNP_LITE
-  inline ::kj::StringTree toString() const {
-    return ::capnp::_::structString(_reader, *_capnpPrivate::brand());
-  }
-#endif  // !CAPNP_LITE
-
-  inline float getRoll() const;
-
-  inline float getPitch() const;
-
-  inline float getYaw() const;
-
-  inline float getThrottle() const;
-
-private:
-  ::capnp::_::StructReader _reader;
-  template <typename, ::capnp::Kind>
-  friend struct ::capnp::ToDynamic_;
-  template <typename, ::capnp::Kind>
-  friend struct ::capnp::_::PointerHelpers;
-  template <typename, ::capnp::Kind>
-  friend struct ::capnp::List;
-  friend class ::capnp::MessageBuilder;
-  friend class ::capnp::Orphanage;
-};
-
-class JoystickCommand::Builder {
-public:
-  typedef JoystickCommand Builds;
-
-  Builder() = delete;  // Deleted to discourage incorrect usage.
-                       // You can explicitly initialize to nullptr instead.
-  inline Builder(decltype(nullptr)) {}
-  inline explicit Builder(::capnp::_::StructBuilder base): _builder(base) {}
-  inline operator Reader() const { return Reader(_builder.asReader()); }
-  inline Reader asReader() const { return *this; }
-
-  inline ::capnp::MessageSize totalSize() const { return asReader().totalSize(); }
-#if !CAPNP_LITE
-  inline ::kj::StringTree toString() const { return asReader().toString(); }
-#endif  // !CAPNP_LITE
-
-  inline float getRoll();
-  inline void setRoll(float value);
-
-  inline float getPitch();
-  inline void setPitch(float value);
-
-  inline float getYaw();
-  inline void setYaw(float value);
-
-  inline float getThrottle();
-  inline void setThrottle(float value);
-
-private:
-  ::capnp::_::StructBuilder _builder;
-  template <typename, ::capnp::Kind>
-  friend struct ::capnp::ToDynamic_;
-  friend class ::capnp::Orphanage;
-  template <typename, ::capnp::Kind>
-  friend struct ::capnp::_::PointerHelpers;
-};
-
-#if !CAPNP_LITE
-class JoystickCommand::Pipeline {
-public:
-  typedef JoystickCommand Pipelines;
-
-  inline Pipeline(decltype(nullptr)): _typeless(nullptr) {}
-  inline explicit Pipeline(::capnp::AnyPointer::Pipeline&& typeless)
-      : _typeless(kj::mv(typeless)) {}
-
-private:
-  ::capnp::AnyPointer::Pipeline _typeless;
-  friend class ::capnp::PipelineHook;
-  template <typename, ::capnp::Kind>
-  friend struct ::capnp::ToDynamic_;
-};
-#endif  // !CAPNP_LITE
-
 // =======================================================================================
 
-inline float JoystickCommand::Reader::getRoll() const {
+inline float CustomReserved0::Reader::getRoll() const {
   return _reader.getDataField<float>(
       ::capnp::bounded<0>() * ::capnp::ELEMENTS);
 }
 
-inline float JoystickCommand::Builder::getRoll() {
+inline float CustomReserved0::Builder::getRoll() {
   return _builder.getDataField<float>(
       ::capnp::bounded<0>() * ::capnp::ELEMENTS);
 }
-inline void JoystickCommand::Builder::setRoll(float value) {
+inline void CustomReserved0::Builder::setRoll(float value) {
   _builder.setDataField<float>(
       ::capnp::bounded<0>() * ::capnp::ELEMENTS, value);
 }
 
-inline float JoystickCommand::Reader::getPitch() const {
+inline float CustomReserved0::Reader::getPitch() const {
   return _reader.getDataField<float>(
       ::capnp::bounded<1>() * ::capnp::ELEMENTS);
 }
 
-inline float JoystickCommand::Builder::getPitch() {
+inline float CustomReserved0::Builder::getPitch() {
   return _builder.getDataField<float>(
       ::capnp::bounded<1>() * ::capnp::ELEMENTS);
 }
-inline void JoystickCommand::Builder::setPitch(float value) {
+inline void CustomReserved0::Builder::setPitch(float value) {
   _builder.setDataField<float>(
       ::capnp::bounded<1>() * ::capnp::ELEMENTS, value);
 }
 
-inline float JoystickCommand::Reader::getYaw() const {
+inline float CustomReserved0::Reader::getYaw() const {
   return _reader.getDataField<float>(
       ::capnp::bounded<2>() * ::capnp::ELEMENTS);
 }
 
-inline float JoystickCommand::Builder::getYaw() {
+inline float CustomReserved0::Builder::getYaw() {
   return _builder.getDataField<float>(
       ::capnp::bounded<2>() * ::capnp::ELEMENTS);
 }
-inline void JoystickCommand::Builder::setYaw(float value) {
+inline void CustomReserved0::Builder::setYaw(float value) {
   _builder.setDataField<float>(
       ::capnp::bounded<2>() * ::capnp::ELEMENTS, value);
 }
 
-inline float JoystickCommand::Reader::getThrottle() const {
+inline float CustomReserved0::Reader::getThrottle() const {
   return _reader.getDataField<float>(
       ::capnp::bounded<3>() * ::capnp::ELEMENTS);
 }
 
-inline float JoystickCommand::Builder::getThrottle() {
+inline float CustomReserved0::Builder::getThrottle() {
   return _builder.getDataField<float>(
       ::capnp::bounded<3>() * ::capnp::ELEMENTS);
 }
-inline void JoystickCommand::Builder::setThrottle(float value) {
+inline void CustomReserved0::Builder::setThrottle(float value) {
   _builder.setDataField<float>(
       ::capnp::bounded<3>() * ::capnp::ELEMENTS, value);
 }

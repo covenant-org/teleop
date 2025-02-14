@@ -6,12 +6,17 @@
 // (for Ubuntu: sudo apt install libsdl2-dev).
 //
 
+#include <capnp/common.h>
 #include <capnp/serialize.h>
 #include <chrono>
 #include <cstdio>
 #include <future>
+#include <kj/array.h>
+#include <kj/common.h>
+#include <kj/exception.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <unistd.h>
 #include <memory>
 #include <iostream>
 
@@ -25,12 +30,18 @@
 #include <capnp/message.h>
 #include <capnp/serialize-packed.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
 
 
 using namespace mavsdk;
 using std::chrono::seconds;
 using std::chrono::milliseconds;
 using std::this_thread::sleep_for;
+
+bool isFileDescriptiorValid(int client_socket_fd) {
+  return fcntl(client_socket_fd, F_GETFD) != -1 || errno != EBADF;
+}
 
 // This config works for Logitech Extreme 3D Pro
 struct JoystickMapping {
@@ -45,29 +56,7 @@ struct JoystickMapping {
     bool throttle_inverted = true;
 } joystick_mapping{};
 
-void usage(const std::string& bin_name)
-{
-    std::cerr << "Usage : " << bin_name << " <connection_url>\n"
-              << "Connection URL format should be :\n"
-              << " For TCP : tcp://[server_host][:server_port]\n"
-              << " For UDP : udp://[bind_host][:bind_port]\n"
-              << " For Serial : serial:///path/to/serial/dev[:baudrate]\n"
-              << "For example, to connect to the simulator use URL: udpin://0.0.0.0:14540\n";
-}
-
-int main(int argc, char** argv)
-{
-    if (argc != 1) {
-        // usage(argv[0]);
-        return 1;
-    }
-
-    auto joystick = Joystick::create();
-    if (!joystick) {
-        std::cerr << "Could not find any joystick\n";
-        return 1;
-    }
-
+int get_socket_connection(const std::string &ip) {
     const uint32_t port = 4069;
 
     int client_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -79,65 +68,114 @@ int main(int argc, char** argv)
                           .sin_port = htons(port),
                           .sin_addr =
                               {
-                                  .s_addr = INADDR_ANY,
+                                  .s_addr = inet_addr(ip.c_str()),
                               }};
     int status = connect(client_fd, reinterpret_cast<sockaddr *>(&server_addr), sizeof(server_addr));
     if (status < 0) {
         throw std::runtime_error("Failed to bind TCP socket");
     }
 
-    ::capnp::MallocMessageBuilder message;
-    cereal::JoystickCommand::Builder joystickBuilder = message.initRoot<cereal::JoystickCommand>();
+    return client_fd;
+}
+
+void send_op(int fd, int op) {
+    std::cout << "sending op: " << op << std::endl;
+    int buf[1] = {op};
+    write(fd, buf, sizeof(buf));
+}
+
+void usage(const std::string& bin_name)
+{
+    std::cerr << "Usage : " << bin_name << " <ip>\n"
+              << "ip from server:\n"
+              << "For example, to connect to the simulator use IP: 127.0.0.1\n";
+}
+
+int main(int argc, char** argv)
+{
+    if (argc != 2) {
+        usage("client");
+        return 1;
+    }
+
+    std::string ip = argv[1];
+
+    auto joystick = Joystick::create();
+    if (!joystick) {
+        std::cerr << "Could not find any joystick\n";
+        return 1;
+    }
+
 
     bool has_started = false;
 
     while (true) {
         if (has_started) {
-            { // axis
-                const float roll = joystick->get_axis(joystick_mapping.roll_axis) *
-                                   (joystick_mapping.roll_inverted ? -1.f : 1.f);
-                const float pitch = joystick->get_axis(joystick_mapping.pitch_axis) *
-                                    (joystick_mapping.pitch_inverted ? -1.f : 1.f);
-                const float yaw = joystick->get_axis(joystick_mapping.yaw_axis) *
-                                  (joystick_mapping.yaw_inverted ? -1.f : 1.f);
-                float throttle = joystick->get_axis(joystick_mapping.throttle_axis) *
-                                 (joystick_mapping.throttle_inverted ? -1.f : 1.f);
-
-                // Scale -1 to 1 throttle range to 0 to 1
-                throttle = throttle / 2.f + 0.5f;
-
-                uint8_t buf[1];
-
-                joystickBuilder.setYaw(yaw);
-                joystickBuilder.setPitch(pitch);
-                joystickBuilder.setRoll(roll);
-                joystickBuilder.setThrottle(throttle);
-                writePackedMessageToFd(client_fd, message);
-                recv(client_fd, buf, sizeof(uint8_t), MSG_WAITALL);
-            }
+        //     { // axis
+        //         ::capnp::MallocMessageBuilder message;
+        //         cereal::CustomReserved0::Builder jst = message.initRoot<cereal::CustomReserved0>();
+        //
+        //         int fd = get_socket_connection(ip);
+        //         const float roll = joystick->get_axis(joystick_mapping.roll_axis) *
+        //                            (joystick_mapping.roll_inverted ? -1.f : 1.f);
+        //         const float pitch = joystick->get_axis(joystick_mapping.pitch_axis) *
+        //                             (joystick_mapping.pitch_inverted ? -1.f : 1.f);
+        //         const float yaw = joystick->get_axis(joystick_mapping.yaw_axis) *
+        //                           (joystick_mapping.yaw_inverted ? -1.f : 1.f);
+        //         float throttle = joystick->get_axis(joystick_mapping.throttle_axis) *
+        //                          (joystick_mapping.throttle_inverted ? -1.f : 1.f);
+        //         // Scale -1 to 1 throttle range to 0 to 1
+        //         throttle = throttle / 2.f + 0.5f;
+        //         send_op(fd, 2);
+        //
+        //
+        //         jst.setYaw(yaw);
+        //         jst.setPitch(pitch);
+        //         jst.setRoll(roll);
+        //         jst.setThrottle(throttle);
+        //
+        //         if (isFileDescriptiorValid(fd)) {
+        //             try {
+        //                 capnp::writePackedMessageToFd(fd, message);
+        //             } catch (kj::Exception& e) {
+        //                 std::cout << "Failed to write message" << e.getDescription().cStr() << std::endl;
+        //             }
+        //         }
+        //
+        //         uint8_t response[1];
+        //         int bytes = read(fd, response, sizeof(response));
+        //         if (bytes == -1) {
+        //             printf("error reading response");
+        //         }
+        //         close(fd);
+        //     }
 
             { // rb
                 if (joystick->get_button(5)) {
-                    uint8_t buf[] = {4};
-                    send(client_fd, buf, sizeof(buf), 0);
-                    uint8_t out[1];
-                    recv(client_fd, out, sizeof(uint8_t), MSG_WAITALL);
-                    if (out[0] == 0) {
-                        has_started = false;
+                    int fd = get_socket_connection(ip);
+                    send_op(fd, 4);
+                    uint8_t response[1];
+                    int bytes = read(fd, response, sizeof(response));
+                    if (bytes == -1) {
+                        printf("error reading response");
                     }
+                    close(fd);
+                    has_started = false;
                 }
             }
 
             sleep_for(milliseconds(20));
         } else {
             if (joystick->get_button(4)) { // lb
-                uint8_t buf[] = {3};
-                send(client_fd, buf, sizeof(buf), 0);
-                uint8_t out[1];
-                recv(client_fd, out, sizeof(uint8_t), MSG_WAITALL);
-                if (out[0] == 0) {
-                    has_started = true;
+                int fd = get_socket_connection(ip);
+                send_op(fd, 3);
+                uint8_t response[1];
+                int bytes = read(fd, response, sizeof(response));
+                if (bytes == -1) {
+                    printf("error reading response");
                 }
+                close(fd);
+                has_started = true;
             }
         }
     }

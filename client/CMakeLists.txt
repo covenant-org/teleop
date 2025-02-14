@@ -30,6 +30,7 @@ target_link_libraries(client
     SDL2::SDL2
     Threads::Threads
     capnp
+    kj
 )
 
 if(NOT MSVC)

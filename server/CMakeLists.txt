@@ -16,10 +16,9 @@ find_package(gz-transport13 REQUIRED)
 
 target_link_libraries(server
     MAVSDK::mavsdk
-    gz-msgs10
-    gz-transport13
     capnp
     pthread
+    kj
 )
 
 if(NOT MSVC)
